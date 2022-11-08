@@ -1,0 +1,84 @@
+version: "3.8"
+
+services:
+  mariadb:
+    container_name: mariadb
+    image: mariadb
+    build:
+      context: requirements/mariadb
+      args:
+        - MARIADB_DATABASE
+        - MARIADB_USER
+        - MARIADB_PASSWORD
+        - MARIADB_ROOT_PASSWORD
+    ports:
+      - 3306
+    volumes:
+      - docker-mdb-data:/var/lib/mysql
+    networks:
+      - docker-network
+    restart: on-failure
+    init: true
+
+  wordpress:
+    container_name: wordpress
+    image: wordpress
+    build:
+      context: requirements/wordpress
+      args:
+        - MARIADB_DATABASE
+        - MARIADB_USER
+        - MARIADB_PASSWORD
+        - MARIADB_HOST
+    env_file:
+      - .env
+    depends_on:
+      - mariadb
+    ports:
+     - 3306
+     - 9000
+    volumes:
+     - docker-wp-data:/var/www/html
+    networks:
+     - docker-network
+    restart: on-failure
+    init: true
+
+  nginx:
+    container_name: nginx
+    image: nginx
+    build:
+      context: requirements/nginx
+    depends_on:
+      - wordpress
+    ports:
+      - 9000
+      - 443:443
+      - 8080:80
+    volumes:
+      - docker-wp-data:/var/www/html
+    networks:
+      - docker-network
+    restart: on-failure
+    init: true
+    
+
+networks:
+  docker-network:
+
+volumes:
+  docker-mdb-data:
+    name: docker-mdb-data
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/fbelthoi/data/mariadb
+      o: bind
+
+  docker-wp-data:
+    name: docker-wp-data
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/fbelthoi/data/wordpress
+      o: bind
